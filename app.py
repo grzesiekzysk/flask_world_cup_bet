@@ -1,6 +1,10 @@
-from flask import Flask, url_for, redirect, render_template, g, request
+from flask import Flask, url_for, redirect, render_template, g, request, flash, session
 from flask import render_template
 import sqlite3
+
+import string
+import hashlib
+import binascii
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'O większego trudno zucha!'
@@ -16,18 +20,56 @@ def get_db():
     
     return g.sqlite_db
 
+class Users:
+
+    def __init__(self, user='', password=''):
+        self.user = user
+        self.password = password
+
+    def hash_password(self):
+        os_urandom_static =b"ID_\x12p:\x8d\xe7&\xcb\xf0=H1\xc1\x16\xac\xe5BX\xd7\xd6j\xe3i\x11\xbe\xaa\x05\xccc\xc2\xe8K\xcf\xf1\xac\x9bFy(\xfbn.`\xe9\xcd\xdd'\xdf`~vm\xae\xf2\x93WD\x04"
+        salt = hashlib.sha256(os_urandom_static).hexdigest().encode('ascii')
+        pwdhash = hashlib.pbkdf2_hmac('sha512', self.password.encode('utf-8'), salt, 100000)
+        pwdhash = binascii.hexlify(pwdhash)
+        return (salt + pwdhash).decode('ascii')
+
+    def verify_password(self, stored_password, provided_password):
+        salt = stored_password[:64]
+        stored_password = stored_password[64:]
+        pwdhash = hashlib.pbkdf2_hmac('sha512', provided_password.encode('utf-8'),
+        salt.encode('ascii'), 100000)
+        pwdhash = binascii.hexlify(pwdhash).decode('ascii')
+        return pwdhash == stored_password
+
+    def login_user(self):
+
+        db = get_db()
+        query = 'select id, login, password, is_admin from users where login=?'
+        c = db.execute(query, [self.user])
+        user_record = c.fetchone()
+
+        if user_record != None and self.user != '' and self.verify_password(user_record['password'], self.password):
+            return user_record
+        else:
+            self.user = None
+            self.password = None
+            return None
+
+        
+
 @app.route('/')
 def index():
 
     db = get_db()
-    sql_command = """
+
+    query  = """
     select 
         m.*, 
         case when date > DATETIME('now') then 1 else 0 end as dostepny
     from matches m
     order by date asc
     """
-    c = db.execute(sql_command)
+    c = db.execute(query)
     matches = c.fetchall()
 
     return render_template('index.html', matches=matches)
@@ -36,5 +78,70 @@ def index():
 def signup():
     if request.method == 'GET':
         return render_template('signup.html')
+
     else:
-        return render_template('signup.html')
+
+        if request.form['psw'] != request.form['psw2']:
+            return render_template('signup.html')
+
+        db = get_db()
+
+        login = request.form['login']
+        email = request.form['email']
+        password = request.form['psw']
+        
+        query = """
+        select count(*) as cnt
+        from users
+        where email = ?
+        or login = ?
+        """
+
+        c = db.execute(
+            query, [email, login])
+
+        n_users = c.fetchone()
+
+        if n_users['cnt'] != 0:
+            return render_template('signup.html')
+
+        query = """
+        insert into users (login, email, password)values (?, ?, ?)
+        """
+        
+        userpass = Users(login, password)
+        password_hash = userpass.hash_password()
+
+        db.execute(query, [login, email, password_hash])
+        db.commit()
+
+        return redirect(url_for('index'))
+
+@app.route('/login', methods=['POST'])
+def login():
+
+        user_name = '' if 'login' not in request.form else request.form['login']
+        user_pass = '' if 'psw' not in request.form else request.form['psw']
+        
+        login = Users(user_name, user_pass)
+        login_record = login.login_user()
+
+        if login_record != None:
+            
+            session['user'] = user_name
+            flash('Logon succesfull, welcome {}'.format(user_name))
+        
+            return redirect(url_for('index'))
+        else:
+            
+            flash('Logon failed, try again')
+            return redirect(url_for('index'))
+
+@app.route('/logout', methods=['POST'])
+def logout():
+
+    if 'user' in session:
+        session.pop('user', None)
+
+    flash('You are logged out')
+    return redirect(url_for('index'))
