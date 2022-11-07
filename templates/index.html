@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<table class="table">
+    <thead>
+    <tr>
+    <th scope="col">Data</th>
+    <th scope="col">Mecz</th>
+    <th scope="col">Wynik</th>
+    <th scope="col">Twój typ</th>
+    <th scope="col">Typ</th>
+    <th scope="col">Punkty</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for m in matches %}
+    <tr>
+    <td>{{ m.date[:-3] }}</td>
+    <td>{{ m.home + " - " + m.away  }}</td>
+    {% if m.home_score is not none %}
+    <td>{{ m.home_score|string + " : " + m.away_score|string }}</td>
+    {% else %}
+    <td>{{ "Brak" }}</td>
+    {% endif %}
+    <td>Brak</td>
+    <td>
+        {% if m.dostepny == 1 %}
+        <form action="/action_page.php">
+            <div class="input-group">
+                <form action="/action_page.php">
+                <input class="form-control input-sm" style="width:50px;" type="number" min="0" max="99" placeholder="0" name="home_score">
+                <span class="input-group-btn" style="width:0px;"></span>
+                <input class="form-control input-sm" style="width:50px;" type="number" min="0" max="99" placeholder="0" name="away_score">
+                <button class="typuj_button" type="submit">Typuj</button>
+                </form>
+            </div>
+        </form>
+        {% endif %}
+    </td>
+    <td>0</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+
+{% endblock %}
