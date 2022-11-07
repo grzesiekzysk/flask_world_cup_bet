@@ -3,17 +3,20 @@
     <a href="#about">Tablica wyników</a>
     <a href="{{ url_for('signup') }}">Rejestracja</a>
     <div class="login-container">
-      
       {% if 'user' in session %}
+
       <form method="POST" action={{ url_for('logout') }}>
         <button type="submit">Wyloguj</button>
       </form>
+      
       {% else %}
+      
       <form method="POST" action={{ url_for('login') }}>
         <input type="text" placeholder="Login" name="login">
         <input type="password" placeholder="Hasło" name="psw">
         <button type="submit">Zaloguj</button>
       </form>
+      
       {% endif %}
     </div>
   </div>

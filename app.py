@@ -76,12 +76,14 @@ def index():
 
 @app.route('/signup', methods=['GET','POST'])
 def signup():
+
     if request.method == 'GET':
         return render_template('signup.html')
 
     else:
 
         if request.form['psw'] != request.form['psw2']:
+            flash('Hasła są różne')
             return render_template('signup.html')
 
         db = get_db()
@@ -89,7 +91,11 @@ def signup():
         login = request.form['login']
         email = request.form['email']
         password = request.form['psw']
-        
+
+        if login == '' or email == '' or password == '':
+            flash('Formularz zawiera puste wartości')
+            return render_template('signup.html')
+
         query = """
         select count(*) as cnt
         from users
@@ -103,6 +109,7 @@ def signup():
         n_users = c.fetchone()
 
         if n_users['cnt'] != 0:
+            flash('Użytkownik o podanym loginie lub emailu istnieje')
             return render_template('signup.html')
 
         query = """
@@ -115,6 +122,7 @@ def signup():
         db.execute(query, [login, email, password_hash])
         db.commit()
 
+        flash('Rejestracja pomyślna')
         return redirect(url_for('index'))
 
 @app.route('/login', methods=['POST'])
@@ -129,12 +137,12 @@ def login():
         if login_record != None:
             
             session['user'] = user_name
-            flash('Logon succesfull, welcome {}'.format(user_name))
+            flash(f'Logowanie pomyślne, witaj {user_name}')
         
             return redirect(url_for('index'))
         else:
             
-            flash('Logon failed, try again')
+            flash('Logowanie nie powiodło się')
             return redirect(url_for('index'))
 
 @app.route('/logout', methods=['POST'])
@@ -143,5 +151,43 @@ def logout():
     if 'user' in session:
         session.pop('user', None)
 
-    flash('You are logged out')
+    flash('Wylogowano')
+    return redirect(url_for('index'))
+
+@app.route('/typuj/<int:match_id>', methods=['POST'])
+def typuj_mecz(match_id):
+
+    if 'user' not in session:
+        flash('Nie jesteś zalogowany')
+        return redirect(url_for('index'))
+
+    db = get_db()
+
+    query = """
+    delete from bets 
+    where login = ?
+    and id_match = ? 
+    """
+    try:
+        db.execute(query, [session['user'], match_id])
+        db.commit()
+    except:
+        pass
+
+    query = """
+    insert into bets (login, id_match, home_score, away_score)
+    values (?, ?, ?, ?)
+    """
+
+    db.execute(
+        query, 
+        [session['user'], 
+        match_id, 
+        request.form['home_score'],
+        request.form['away_score']
+    ])
+
+    db.commit()
+
+    flash('Wytypowano wynik meczu')
     return redirect(url_for('index'))

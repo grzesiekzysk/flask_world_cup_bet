@@ -10,11 +10,13 @@
     <body>
         <div class="container">
         {% include "navbar.html" %} 
+        
         <br>
-        {{ session['user'] if user in session }}
+
         {% for message in get_flashed_messages() %}
-        <div>{{ message }}</dev>
+        <div class="alert alert-dark" role="alert">{{ message }}</div>
         {% endfor %}
+
         {% block content %}
         {% endblock %}
         </div>

@@ -16,7 +16,7 @@
     <tbody>
     {% for m in matches %}
     <tr>
-    <td>{{ m.date[:-3] }}</td>
+    <td class="td_color">{{ m.date[:-3] }}</td>
     <td>{{ m.home + " - " + m.away  }}</td>
     {% if m.home_score is not none %}
     <td>{{ m.home_score|string + " : " + m.away_score|string }}</td>
@@ -26,14 +26,12 @@
     <td>Brak</td>
     <td>
         {% if m.dostepny == 1 %}
-        <form action="/action_page.php">
+        <form method="POST" action={{ url_for('typuj_mecz', match_id=m.id) }}>
             <div class="input-group">
-                <form action="/action_page.php">
-                <input class="form-control input-sm" style="width:50px;" type="number" min="0" max="99" placeholder="0" name="home_score">
+                <input class="form-control input-sm" style="width:40px;" type="number" min="0" max="99" placeholder="0" name="home_score">
                 <span class="input-group-btn" style="width:0px;"></span>
-                <input class="form-control input-sm" style="width:50px;" type="number" min="0" max="99" placeholder="0" name="away_score">
+                <input class="form-control input-sm" style="width:40px;" type="number" min="0" max="99" placeholder="0" name="away_score">
                 <button class="typuj_button" type="submit">Typuj</button>
-                </form>
             </div>
         </form>
         {% endif %}
