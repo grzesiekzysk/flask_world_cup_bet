@@ -180,7 +180,7 @@ def typuj_mecz(match_id):
     """
 
     db.execute(
-        query, 
+        query,
         [session['user'], 
         match_id, 
         request.form['home_score'],
