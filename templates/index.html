@@ -17,7 +17,11 @@
     {% for m in matches %}
     <tr>
     <td class="td_color">{{ m.date[:-3] }}</td>
-    <td>{{ m.home + " - " + m.away  }}</td>
+    <td>
+        <img style="height:80%;" src={{ "/static/flags/" + m.home.replace(' ','_') + ".png" }} />
+        {{ m.home + " - " + m.away  }}
+        <img style="height:80%;" src={{ "/static/flags/" + m.away.replace(' ','_')  + ".png" }} />
+    </td>
     {% if m.home_score is not none %}
     <td>{{ m.home_score|string + " : " + m.away_score|string }}</td>
     {% else %}
