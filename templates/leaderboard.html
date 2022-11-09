@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<table class="table" style="width:50%">
+    <thead>
+    <tr>
+    <th scope="col">Ranking</th>
+    <th scope="col">Użytkownik</th>
+    <th scope="col">Punkty</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for u in users %}
+    <tr>
+    <td>{{ u.ranking }}</td>
+    <td>{{ u.login }}</td>
+    <td>{{ u.points }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+
+{% endblock %}

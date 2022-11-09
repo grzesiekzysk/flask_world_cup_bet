@@ -60,16 +60,46 @@ class Users:
 @app.route('/')
 def index():
 
+    if not 'user' in session:
+        return redirect(url_for('signup'))
+
     db = get_db()
 
     query  = """
     select 
-        m.*, 
-        case when date > DATETIME('now') then 1 else 0 end as dostepny
-    from matches m
+        t.*,
+        --case when date > DATETIME('now') then 1 else 0 end as dostepny,
+        1 as dostepny,
+        case when t.result = t.result_bet then 1 else 0 end +
+        case when (t.home_score = t.home_score_bet) 
+            and (t.away_score = t.away_score_bet) then 3 else 0 end 
+        as points
+        
+    from	(select 
+            m.*,
+            case 
+                when m.home_score = m.away_score then 0
+                when m.home_score > m.away_score then 1
+                when m.home_score < m.away_score then 2
+            end result,
+            
+            b.home_score as home_score_bet,
+            b.away_score as away_score_bet,
+            
+            case 
+                when b.home_score = b.away_score then 0
+                when b.home_score > b.away_score then 1
+                when b.home_score < b.away_score then 2
+            end result_bet
+
+        from matches m
+
+        left join bets b
+            on m.id = b.id_match
+            and b.login = ?) t
     order by date asc
     """
-    c = db.execute(query)
+    c = db.execute(query, [session['user']])
     matches = c.fetchall()
 
     return render_template('index.html', matches=matches)
@@ -179,15 +209,79 @@ def typuj_mecz(match_id):
     values (?, ?, ?, ?)
     """
 
+    home_score, away_score = 0, 0
+
+    if request.form['home_score'] != '':
+        home_score = request.form['home_score']
+
+    if request.form['away_score'] != '':
+        away_score = request.form['away_score']
+
     db.execute(
         query,
         [session['user'], 
         match_id, 
-        request.form['home_score'],
-        request.form['away_score']
+        home_score,
+        away_score
     ])
 
     db.commit()
 
     flash('Wytypowano wynik meczu')
     return redirect(url_for('index'))
+
+@app.route('/leaderboard')
+def leaderboard():
+
+    if not 'user' in session:
+        return redirect(url_for('signup'))
+
+    db = get_db()
+
+    query = """
+    select
+        login,
+        sum(points) points,
+        rank() over(order by sum(points) desc) ranking
+
+    from (select 
+            t.*,
+            case when t.result = t.result_bet then 1 else 0 end +
+            case when (t.home_score = t.home_score_bet) 
+                and (t.away_score = t.away_score_bet) then 3 else 0 end 
+            as points
+            
+        from	(
+            select 
+                u.login,
+                m.*,
+                case 
+                    when m.home_score = m.away_score then 0
+                    when m.home_score > m.away_score then 1
+                    when m.home_score < m.away_score then 2
+                end result,
+                
+                b.home_score as home_score_bet,
+                b.away_score as away_score_bet,
+                
+                case 
+                    when b.home_score = b.away_score then 0
+                    when b.home_score > b.away_score then 1
+                    when b.home_score < b.away_score then 2
+                end result_bet
+
+            from users u
+                
+            cross join matches m
+
+            left join bets b
+                on m.id = b.id_match
+                and b.login = u.login) t) g
+                
+    group by login
+    order by points desc
+    """
+    c = db.execute(query)
+    users = c.fetchall()
+
+    return render_template('leaderboard.html', users=users)

@@ -23,7 +23,11 @@
     {% else %}
     <td>{{ "Brak" }}</td>
     {% endif %}
-    <td>Brak</td>
+    {% if m.home_score_bet is not none %}
+    <td>{{ m.home_score_bet|string + " : " + m.away_score_bet|string }}</td>
+    {% else %}
+    <td>{{ "Brak" }}</td>
+    {% endif %}
     <td>
         {% if m.dostepny == 1 %}
         <form method="POST" action={{ url_for('typuj_mecz', match_id=m.id) }}>
@@ -36,7 +40,7 @@
         </form>
         {% endif %}
     </td>
-    <td>0</td>
+    <td>{{ m.points }}</td>
     </tr>
     {% endfor %}
     </tbody>
