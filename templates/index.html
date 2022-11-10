@@ -37,7 +37,6 @@
         <form method="POST" action={{ url_for('typuj_mecz', match_id=m.id) }}>
             <div class="input-group">
                 <input class="form-control input-sm" style="width:40px;" type="number" min="0" max="99" placeholder="0" name="home_score">
-                <span class="input-group-btn" style="width:0px;"></span>
                 <input class="form-control input-sm" style="width:40px;" type="number" min="0" max="99" placeholder="0" name="away_score">
                 <button class="typuj_button" type="submit">Typuj</button>
             </div>

@@ -122,6 +122,14 @@ def signup():
         email = request.form['email']
         password = request.form['psw']
 
+        if email.find('@') < 0:
+            flash('Email jest niepoprawny')
+            return render_template('signup.html')
+
+        if login.find(' ') > 0:
+            flash('Login zawiera niedozwolone znaki')
+            return render_template('signup.html')
+
         if login == '' or email == '' or password == '':
             flash('Formularz zawiera puste wartości')
             return render_template('signup.html')
