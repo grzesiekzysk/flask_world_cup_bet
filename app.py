@@ -61,6 +61,7 @@ class Users:
 def index():
 
     if not 'user' in session:
+        flash('Nie jesteś zalogowany')
         return redirect(url_for('signup'))
 
     db = get_db()
@@ -242,6 +243,7 @@ def typuj_mecz(match_id):
 def leaderboard():
 
     if not 'user' in session:
+        flash('Nie jesteś zalogowany')
         return redirect(url_for('signup'))
 
     db = get_db()
@@ -293,3 +295,28 @@ def leaderboard():
     users = c.fetchall()
 
     return render_template('leaderboard.html', users=users)
+
+@app.route('/groups')
+def groups():
+
+    if not 'user' in session:
+        flash('Nie jesteś zalogowany')
+        return redirect(url_for('signup'))
+
+    db = get_db()
+
+    query = """
+    
+    """
+
+    c = db.execute(
+        query)
+
+    groups = c.fetchall()
+
+    return render_template('groups.html', groups=groups)
+
+@app.route('/create_group', methods=['POST'])
+def create_group():
+
+    return redirect(url_for('groups'))
