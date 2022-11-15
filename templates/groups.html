@@ -6,24 +6,16 @@
   <thead>
   <tr>
   <th scope="col">Nazwa</th>
-  <th scope="col">Administrator</th>
-  <th scope="col">Członek</th>
+  <th scope="col">Członków</th>
+  <th scope="col">Kod zaproszenia</th>
   </tr>
   </thead>
   <tbody>
   {% for g in groups %}
   <tr>
   <td>{{ g.nazwa }}</td>
-  {% if g.creator == 1 %}
-  <td>TAK</td>
-  {% else %}
-  <td>TAK</td>
-  {% endif %}
-  {% if g.participant == 1 %}
-  <td>TAK</td>
-  {% else %}
-  <td>TAK</td>
-  {% endif %}
+  <td>{{ g.czlonkow }}</td>
+  <td>{{ g.kod }}</td>
   </tr>
   {% endfor %}
   </tbody>

@@ -2,9 +2,10 @@ from flask import Flask, url_for, redirect, render_template, g, request, flash, 
 from flask import render_template
 import sqlite3
 
-import string
 import hashlib
 import binascii
+import random
+import string
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'O większego trudno zucha!'
@@ -19,6 +20,11 @@ def get_db():
         g.sqlite_db = conn
     
     return g.sqlite_db
+
+def get_random_string():
+    letters = string.ascii_lowercase
+    result_str = ''.join(random.choice(letters) for i in range(10))
+    return result_str
 
 class Users:
 
@@ -319,4 +325,41 @@ def groups():
 @app.route('/create_group', methods=['POST'])
 def create_group():
 
+    if not 'user' in session:
+        flash('Nie jesteś zalogowany')
+        return redirect(url_for('groups'))
+
+    if request.form['new_group_name'] == '':
+        flash('Nazwa grupy jest pusta')
+        return redirect(url_for('groups'))
+
+    db = get_db()
+
+    query = """
+    select count(*) cnt
+    from groups 
+    where nazwa_grupy = ?
+    """
+
+    c = db.execute(query, [request.form['new_group_name']])
+    check = c.fetchone()
+
+    if check['cnt'] != 0:
+        flash('Nazwa grupy już występuje')
+        return redirect(url_for('groups'))        
+
+    query = """
+    insert into groups (nazwa_grupy, admin, kod)
+    values (?, ?, ?)
+    """
+
+    db.execute(query, [
+        request.form['new_group_name'],
+        session['user'],
+        get_random_string()
+        ])
+
+    db.commit()
+
+    flash('Utworzono nową grupę')
     return redirect(url_for('groups'))
