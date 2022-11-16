@@ -544,3 +544,7 @@ def group_leaderboard(group_id):
         return redirect(url_for('leaderboard'))
 
     return render_template('leaderboard.html', users=users, groups=groups)
+
+if __name__ == '__main__':
+    #app.run_server(debug=True)
+    app.run_server(host='0.0.0.0', port=8080)
