@@ -5,11 +5,12 @@
 <div class="dropdown">
     <button class="dropbtn">Wybierz grupę</button>
     <div class="dropdown-content">
-      <a href="#">Grupa 1</a>
-      <a href="#">Grupa 2</a>
-      <a href="#">Grupa 3</a>
+      {% for g in groups %}
+      <a href="{{ url_for('group_leaderboard', group_id=g.id) }}">{{ g.nazwa }}</a>
+      {% endfor %}
     </div>
-</div> 
+</div>
+
 
 <table class="table" style="width:50%">
     <thead>
@@ -31,8 +32,8 @@
 </table>
 <br><br>
 <div class="login-container" id="rejestracja">
-    <form method="POST" action={{ url_for('create_group') }}>
-      <input type="text" placeholder="Kod zapraszającego" name="new_group_name"><br><br>
+    <form method="POST" action={{ url_for('join_group') }}>
+      <input type="text" placeholder="Kod zapraszającego" name="kod"><br><br>
       <button type="submit">Dołącz do grupy</button>
     </form>
 </div>

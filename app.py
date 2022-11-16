@@ -75,8 +75,7 @@ def index():
     query  = """
     select 
         t.*,
-        --case when date > DATETIME('now') then 1 else 0 end as dostepny,
-        1 as dostepny,
+        case when date > DATETIME('now') then 1 else 0 end as dostepny,
         case when t.result = t.result_bet then 1 else 0 end +
         case when (t.home_score = t.home_score_bet) 
             and (t.away_score = t.away_score_bet) then 3 else 0 end 
@@ -209,6 +208,20 @@ def typuj_mecz(match_id):
     db = get_db()
 
     query = """
+    select count(*) cnt 
+    from matches
+    where id = ?
+    and date > DATETIME('now')
+    """
+
+    c = db.execute(query, [match_id])
+    check = c.fetchone()
+
+    if check['cnt'] == 0:
+        flash('Nie możesz już wytypować wyniku tego meczu')
+        return redirect(url_for('index'))
+
+    query = """
     delete from bets 
     where login = ?
     and id_match = ? 
@@ -300,7 +313,22 @@ def leaderboard():
     c = db.execute(query)
     users = c.fetchall()
 
-    return render_template('leaderboard.html', users=users)
+    query = """
+    select
+        g.nazwa_grupy nazwa,
+        g.id
+    from users u
+    left join group_users gu
+        on u.id = gu.user_id
+    left join groups g
+        on gu.group_id = g.id
+    where u.login = ?
+    """
+
+    c = db.execute(query, [session['user']])
+    groups = c.fetchall()
+
+    return render_template('leaderboard.html', users=users, groups=groups)
 
 @app.route('/groups')
 def groups():
@@ -312,12 +340,18 @@ def groups():
     db = get_db()
 
     query = """
-    
+    select
+        g.nazwa_grupy nazwa,
+        g.kod,
+        count(distinct gu.user_id) czlonkow
+    from groups g
+    left join group_users gu
+        on g.id = gu.group_id
+    where g.admin = ?
+    group by g.nazwa_grupy, g.kod
     """
 
-    c = db.execute(
-        query)
-
+    c = db.execute(query, [session['user']])
     groups = c.fetchall()
 
     return render_template('groups.html', groups=groups)
@@ -363,3 +397,150 @@ def create_group():
 
     flash('Utworzono nową grupę')
     return redirect(url_for('groups'))
+
+@app.route('/join_group', methods=['POST'])
+def join_group():
+
+    if not 'user' in session:
+        flash('Nie jesteś zalogowany')
+        return redirect(url_for('leaderboard'))
+
+    if request.form['kod'] == '':
+        flash('Nazwa grupy jest pusta')
+        return redirect(url_for('leaderboard'))
+
+    db = get_db()
+
+    query = """
+    select id from groups where kod = ?
+    """
+
+    c = db.execute(query, [request.form['kod']])
+    group = c.fetchone()
+
+    query = """
+    select id from users where login = ?
+    """
+
+    c = db.execute(query, [session['user']])
+    user = c.fetchone()
+
+    query = """
+    select count(*) cnt
+    from group_users
+    where user_id = ?
+    and group_id = ?
+    """
+    c = db.execute(query, [
+        user['id'],
+        group['id']
+        ])
+
+    check = c.fetchone()
+
+    if check['cnt'] != 0:
+        flash('Jesteś już członkiem grupy')
+        return redirect(url_for('leaderboard')) 
+
+    query = """
+    insert into group_users (user_id, group_id)
+    values (?, ?)
+    """
+
+    db.execute(query, [
+        user['id'],
+        group['id']
+        ])
+
+    db.commit()
+
+    flash('Dodano do grupy')
+    return redirect(url_for('leaderboard'))
+
+@app.route('/group_leaderboard/<group_id>')
+def group_leaderboard(group_id):
+
+    if not 'user' in session:
+        flash('Nie jesteś zalogowany')
+        return redirect(url_for('signup'))
+
+    db = get_db()
+
+    query = """
+    select
+        login,
+        sum(points) points,
+        rank() over(order by sum(points) desc) ranking
+    from (select 
+            t.*,
+            case when t.result = t.result_bet then 1 else 0 end +
+            case when (t.home_score = t.home_score_bet) 
+                and (t.away_score = t.away_score_bet) then 3 else 0 end 
+            as points
+        from	(
+            select 
+                u.login,
+                m.*,
+                case 
+                    when m.home_score = m.away_score then 0
+                    when m.home_score > m.away_score then 1
+                    when m.home_score < m.away_score then 2
+                end result,
+                b.home_score as home_score_bet,
+                b.away_score as away_score_bet,     
+                case 
+                    when b.home_score = b.away_score then 0
+                    when b.home_score > b.away_score then 1
+                    when b.home_score < b.away_score then 2
+                end result_bet
+            from users u				
+            cross join matches m
+            left join bets b
+                on m.id = b.id_match
+                and b.login = u.login
+			where u.id in (
+                select user_id 
+                from group_users 
+                where group_id = ?)
+            ) t) g    
+    group by login
+    order by points desc
+    """
+    c = db.execute(query, [group_id])
+    users = c.fetchall()
+
+    query = """
+    select
+        g.nazwa_grupy nazwa,
+        g.id
+    from users u
+    left join group_users gu
+        on u.id = gu.user_id
+    left join groups g
+        on gu.group_id = g.id
+    where u.login = ?
+    """
+
+    c = db.execute(query, [session['user']])
+    groups = c.fetchall()
+
+    query = """
+    select count(*) cnt
+    from group_users gu
+    left join users u
+        on u.id = gu.user_id
+    where u.login = ?
+    and gu.group_id = ?
+    """
+
+    c = db.execute(query, [
+        session['user'],
+        group_id
+        ])
+    check = c.fetchone()
+
+    if check['cnt'] == 0:
+        flash('Nie jesteś członkiem grupy')
+        return redirect(url_for('leaderboard'))
+
+    return render_template('leaderboard.html', users=users, groups=groups)
